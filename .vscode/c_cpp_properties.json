@@ -4,7 +4,8 @@
       "name": "windows-clang-x64",
       "includePath": [
         "${workspaceFolder}/**",
-        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include"
+        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include",
+        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include\\glm"
       ],
       "defines": [
         "_DEBUG",

@@ -9,7 +9,11 @@
         "-g",
         "${file}",
         "-o",
-        "${fileDirname}\\${fileBasenameNoExtension}.exe"
+        "${fileDirname}\\${fileBasenameNoExtension}.exe",
+        "-I",
+        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include",
+        "-I",
+        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include\\glm"
       ],
       "options": {
         "cwd": "${fileDirname}"
@@ -33,6 +37,8 @@
         "${fileDirname}\\${fileBasenameNoExtension}.exe",
         "-I",
         "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include",
+        "-I",
+        "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\include\\glm",
         "-L",
         "D:\\BACKUP Archivos\\Materias\\Ciclo 9\\Graficos\\OpenGL Dependencies\\lib",
         "D:/BACKUP Archivos/Materias/Ciclo 9/Graficos/OpenGL Dependencies/src/glad.c",
