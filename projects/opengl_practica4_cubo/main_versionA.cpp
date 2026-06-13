@@ -19,12 +19,23 @@ using namespace std;
 // factores de escala.
 //
 // CONTROLES DE TECLADO:
-//   Traslacion:        flechas (izq/der = X, arriba/abajo = Y), Q/E = Z
-//   Rotacion:          X, Y, Z seleccionan el eje activo
-//                       R = rota en sentido positivo, F = sentido negativo
-//   Escala:            + / - aumenta/disminuye escala uniforme
-//                       1/2 (X), 3/4 (Y), 5/6 (Z) escala por eje
-//   ESC: salir
+// +- TRASLACION (mover el cubo) -----------------------------------------------+
+// |  Eje X:     LEFT/RIGHT (izquierda/derecha)                              |
+// |  Eje Y:     UP/DOWN (arriba/abajo)                                      |
+// |  Eje Z:     Q (acerca) / E (aleja)                                      |
+// +- ROTACION (girar el cubo) -------------------------------------------------+
+// |  1. Elige eje:  X (eje X) / Y (eje Y) / Z (eje Z)                       |
+// |  2. Gira:       R (sentido horario) / F (sentido antihorario)           |
+// +- ESCALA (cambiar tamaño) --------------------------------------------------+
+// |  Individual por eje:                                                    |
+// |    X: 1 (más grande) / 2 (más pequeño)                                 |
+// |    Y: 3 (más grande) / 4 (más pequeño)                                 |
+// |    Z: 5 (más grande) / 6 (más pequeño)                                 |
+// |  Todas las dimensiones a la vez:                                       |
+// |    + (crecer) / - (encoger)                                            |
+// +- GENERAL -------------------------------------------------------------------+
+// |  ESC: salir del programa                                                |
+// +-----------------------------------------------------------------------------+
 // ============================================================================
 
 const unsigned int SCR_WIDTH  = 800;
@@ -168,11 +179,27 @@ int main()
     // Empujar el cubo hacia -Z para que quede frente a la "camara" (en origen)
     traslacionZ = -4.0f;
 
-    std::cout << "=== Cubo Coloreado y Animado - Version A ===" << std::endl;
-    std::cout << "Traslacion: flechas (X/Y), Q/E (Z)" << std::endl;
-    std::cout << "Rotacion:   X/Y/Z elige eje, R/F gira +/-" << std::endl;
-    std::cout << "Escala:     1/2=X, 3/4=Y, 5/6=Z, +/- uniforme" << std::endl;
-    std::cout << "ESC: salir" << std::endl;
+    std::cout << "\n" << std::endl;
+    std::cout << "+----- CUBO COLOREADO Y ANIMADO - VERSION A (Shader) -----+" << std::endl;
+    std::cout << "|                                                          |" << std::endl;
+    std::cout << "| TRASLACION (flechas + Q/E):                             |" << std::endl;
+    std::cout << "|   LEFT/RIGHT (izquierda/derecha) = eje X               |" << std::endl;
+    std::cout << "|   UP/DOWN (arriba/abajo)           = eje Y               |" << std::endl;
+    std::cout << "|   Q (acerca) / E (aleja)           = eje Z               |" << std::endl;
+    std::cout << "|                                                          |" << std::endl;
+    std::cout << "| ROTACION (X/Y/Z + R/F):                                |" << std::endl;
+    std::cout << "|   X / Y / Z = selecciona eje de rotacion                |" << std::endl;
+    std::cout << "|   R (horario) / F (antihorario)                         |" << std::endl;
+    std::cout << "|                                                          |" << std::endl;
+    std::cout << "| ESCALA (numeros + +/-):                                 |" << std::endl;
+    std::cout << "|   1/2 = eje X   |   3/4 = eje Y   |   5/6 = eje Z       |" << std::endl;
+    std::cout << "|   + (crecer) / - (encoger) en todas las dimensiones     |" << std::endl;
+    std::cout << "|                                                          |" << std::endl;
+    std::cout << "| ESC = salir                                              |" << std::endl;
+    std::cout << "+----------------------------------------------------------+" << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "[EJE ROTACION] Y (eje Y) [INICIAL]" << std::endl;
+    std::cout << "" << std::endl;
 
     float lastTime = (float)glfwGetTime();
 
@@ -225,6 +252,8 @@ int main()
 
 void processInput(GLFWwindow* window)
 {
+    static int ejeRotacionAnterior = 1; // Variable estática para rastrear cambios
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -237,9 +266,27 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_Q)     == GLFW_PRESS) traslacionZ -= PASO_TRASLACION;
 
     // --- Seleccion de eje de rotacion ---
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) ejeRotacion = 0;
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) ejeRotacion = 1;
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) ejeRotacion = 2;
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+        ejeRotacion = 0;
+        if (ejeRotacion != ejeRotacionAnterior) {
+            std::cout << "[EJE ROTACION] X (eje X)" << std::endl;
+            ejeRotacionAnterior = ejeRotacion;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+        ejeRotacion = 1;
+        if (ejeRotacion != ejeRotacionAnterior) {
+            std::cout << "[EJE ROTACION] Y (eje Y)" << std::endl;
+            ejeRotacionAnterior = ejeRotacion;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+        ejeRotacion = 2;
+        if (ejeRotacion != ejeRotacionAnterior) {
+            std::cout << "[EJE ROTACION] Z (eje Z)" << std::endl;
+            ejeRotacionAnterior = ejeRotacion;
+        }
+    }
 
     // --- Rotacion en ambos sentidos ---
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
