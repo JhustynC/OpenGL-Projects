@@ -8,7 +8,7 @@ using namespace std;
 #include <cmath>
 
 #include "shader.h"
-#include "cube.h"
+#include "topologia.h"
 
 // ============================================================================
 // PRACTICA: Cubo Coloreado y Animado - VERSION A
