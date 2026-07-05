@@ -8,11 +8,11 @@
 // ============================================================================
 // CLASE Sphere
 // ----------------------------------------------------------------------------
-// Genera una esfera aproximada a partir de un ICOSAEDRO (20 caras
+// Genera una esfera aproximada a partir de un TETRAEDRO (4 caras
 // triangulares) mediante subdivisiones sucesivas.
 //
 // Algoritmo (igual que en la diapositiva):
-//   1. Partir de un icosaedro inscrito en la esfera unitaria.
+//   1. Partir de un tetraedro inscrito en la esfera unitaria.
 //   2. Por cada triangulo, calcular los 3 puntos medios de sus aristas.
 //   3. NORMALIZAR cada punto medio (p^ = p/|p|) -> proyectarlo sobre la esfera.
 //   4. Reemplazar el triangulo original por 4 sub-triangulos.
@@ -38,42 +38,32 @@ public:
     std::vector<float> positions; // x,y,z por vertice
     std::vector<float> normals;   // nx,ny,nz por vertice (flat o smooth segun modo)
 
-    // numSubdivisiones: 3=~320 tri, 4=~1280 tri, 5=~5120 tri
+    // numSubdivisiones: 0=4 tri, 1=16 tri, 2=64 tri, 3=256 tri, 4=1024 tri, 5=4096 tri
     // flatNormals: true = normal de cara (Version A), false = normal de vertice (Version B)
     Sphere(int numSubdivisiones = 4, bool flatNormals = true)
     {
         // ------------------------------------------------------------------
-        // 1. Icosaedro inicial (12 vertices, 20 triangulos)
+        // 1. Tetraedro inicial (4 vertices, 4 triangulos)
         // ------------------------------------------------------------------
-        const float t = (1.0f + sqrtf(5.0f)) / 2.0f; // razon aurea
-
         std::vector<V3> v;
 
-        // 12 vertices del icosaedro, normalizados para que queden en la esfera
+        // 4 vertices del tetraedro, normalizados para que queden en la esfera
         auto addVert = [&](float x, float y, float z) {
             float len = sqrtf(x*x + y*y + z*z);
             v.push_back(V3(x/len, y/len, z/len));
         };
 
-        addVert(-1,  t,  0); addVert( 1,  t,  0);
-        addVert(-1, -t,  0); addVert( 1, -t,  0);
-        addVert( 0, -1,  t); addVert( 0,  1,  t);
-        addVert( 0, -1, -t); addVert( 0,  1, -t);
-        addVert( t,  0, -1); addVert( t,  0,  1);
-        addVert(-t,  0, -1); addVert(-t,  0,  1);
+        addVert( 1,  1,  1);
+        addVert(-1, -1,  1);
+        addVert(-1,  1, -1);
+        addVert( 1, -1, -1);
 
-        // 20 caras del icosaedro
+        // 4 caras del tetraedro, orientadas hacia afuera
         std::vector<Face> faces;
-        faces.push_back(Face(0,11,5));  faces.push_back(Face(0,5,1));
-        faces.push_back(Face(0,1,7));   faces.push_back(Face(0,7,10));
-        faces.push_back(Face(0,10,11)); faces.push_back(Face(1,5,9));
-        faces.push_back(Face(5,11,4));  faces.push_back(Face(11,10,2));
-        faces.push_back(Face(10,7,6));  faces.push_back(Face(7,1,8));
-        faces.push_back(Face(3,9,4));   faces.push_back(Face(3,4,2));
-        faces.push_back(Face(3,2,6));   faces.push_back(Face(3,6,8));
-        faces.push_back(Face(3,8,9));   faces.push_back(Face(4,9,5));
-        faces.push_back(Face(2,4,11));  faces.push_back(Face(6,2,10));
-        faces.push_back(Face(8,6,7));   faces.push_back(Face(9,8,1));
+        faces.push_back(Face(0,2,1));
+        faces.push_back(Face(0,1,3));
+        faces.push_back(Face(0,3,2));
+        faces.push_back(Face(1,2,3));
 
         // ------------------------------------------------------------------
         // 2. Subdividir N veces

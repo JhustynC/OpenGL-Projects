@@ -8,6 +8,7 @@ using namespace std;
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 #include "shader.h"
 #include "sphere.h"
@@ -25,6 +26,7 @@ using namespace std;
 //
 // CONTROLES:
 //   1 / 2 / ESPACIO Alternar Version A/B
+//   N / M           Aumentar / disminuir aproximacion de la esfera
 //   Flechas / Q-E   Trasladar la esfera
 //   X / Y / Z       Seleccionar eje de rotacion
 //   R / F           Rotar en sentido +/-
@@ -33,7 +35,7 @@ using namespace std;
 // ============================================================================
 
 // ---- Configuracion ----
-const int  SUBDIVISIONES = 4;  // 3=rapido, 4=bueno para comparar A/B, 5=muy suave
+const int  MAX_SUBDIVISIONES = 5;  // 0=tetraedro, 5=muy suave
 
 // ---- Ventana ----
 const unsigned int SCR_WIDTH  = 800;
@@ -57,6 +59,8 @@ int   ejeRotacion    = 1;   // 0=X, 1=Y, 2=Z
 float velocidadRot   = 0.0f;
 bool  usarVersionA   = true;
 bool  cambioVersionBloqueado = false;
+bool  cambioDetalleBloqueado = false;
+int   nivelSubdivision = MAX_SUBDIVISIONES;
 
 // Posicion de la luz (se puede acercar/alejar con + y -)
 float luzZ = -2.0f;
@@ -66,11 +70,12 @@ const float PASO_ROT        = 1.2f;  // rad/seg
 const float LUZ_X           = 0.75f;
 const float LUZ_Y           = 0.75f;
 
-static const char* getWindowTitle(bool versionA)
+static std::string getWindowTitle(bool versionA, int subdivision)
 {
-    return versionA
+    std::string version = versionA
         ? "Esfera Iluminada - Version A (Phong por cara en C++)"
         : "Esfera Iluminada - Version B (Gouraud en vertex shader)";
+    return version + " - Nivel " + std::to_string(subdivision);
 }
 
 // ---- Proyeccion perspectiva (sin GLM) ----
@@ -363,7 +368,8 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, getWindowTitle(usarVersionA), NULL, NULL);
+    std::string tituloInicial = getWindowTitle(usarVersionA, nivelSubdivision);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, tituloInicial.c_str(), NULL, NULL);
     if (!window) { std::cout << "Error GLFW" << std::endl; glfwTerminate(); return -1; }
 
     glfwMakeContextCurrent(window);
@@ -390,22 +396,40 @@ int main()
     //      flatNormals=true  -> Version A: normal de cara
     //      flatNormals=false -> Version B: normal de vertice = posicion
     // ------------------------------------------------------------------
-    Sphere esferaA(SUBDIVISIONES, true);
-    Sphere esferaB(SUBDIVISIONES, false);
+    std::vector<Sphere> esferasA;
+    std::vector<Sphere> esferasB;
+    esferasA.reserve(MAX_SUBDIVISIONES + 1);
+    esferasB.reserve(MAX_SUBDIVISIONES + 1);
+
+    for (int nivel = 0; nivel <= MAX_SUBDIVISIONES; nivel++)
+    {
+        esferasA.emplace_back(nivel, true);
+        esferasB.emplace_back(nivel, false);
+    }
+
     Sphere marcadorLuz(1, false);
 
-    std::cout << "Esfera generada: " << esferaA.vertexCount() << " vertices ("
-              << esferaA.vertexCount() / 3 << " triangulos)" << std::endl;
+    std::cout << "Niveles de aproximacion generados:" << std::endl;
+    for (int nivel = 0; nivel <= MAX_SUBDIVISIONES; nivel++)
+    {
+        std::cout << "  Nivel " << nivel << ": " << esferasA[nivel].vertexCount() << " vertices ("
+                  << esferasA[nivel].vertexCount() / 3 << " triangulos)" << std::endl;
+    }
 
     // ------------------------------------------------------------------
     // 4. VAO + VBO (posiciones y normales en regiones separadas
     //    con glBufferSubData, como pide el docente) + sin EBO
     //    (cada triangulo tiene sus 3 vertices propios)
     // ------------------------------------------------------------------
-    GpuMesh meshA, meshB, meshLuz;
+    std::vector<GpuMesh> meshesA(MAX_SUBDIVISIONES + 1);
+    std::vector<GpuMesh> meshesB(MAX_SUBDIVISIONES + 1);
+    GpuMesh meshLuz;
     float lightMarkerColor[3] = { 1.0f, 0.95f, 0.15f };
-    createSphereMesh(meshA, esferaA, true);
-    createSphereMesh(meshB, esferaB, false);
+    for (int nivel = 0; nivel <= MAX_SUBDIVISIONES; nivel++)
+    {
+        createSphereMesh(meshesA[nivel], esferasA[nivel], true);
+        createSphereMesh(meshesB[nivel], esferasB[nivel], false);
+    }
     createLightMesh(meshLuz, marcadorLuz, lightMarkerColor);
 
     // ------------------------------------------------------------------
@@ -441,10 +465,12 @@ int main()
                      (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 20.0f);
 
     std::cout << "Version inicial: A (calculos por cara en C++)" << std::endl;
-    std::cout << "1/2/Espacio: cambiar A-B | Flechas/Q-E: mover | X/Y/Z: eje rot | R/F: rotar | +/-: luz | ESC: salir" << std::endl;
+    std::cout << "Nivel inicial: " << nivelSubdivision << " (esfera mas suave)" << std::endl;
+    std::cout << "1/2/Espacio: cambiar A-B | N/M: aumentar-disminuir aproximacion | Flechas/Q-E: mover | X/Y/Z: eje rot | R/F: rotar | +/-: luz | ESC: salir" << std::endl;
 
     float lastTime = (float)glfwGetTime();
     bool versionAnterior = usarVersionA;
+    int nivelAnterior = nivelSubdivision;
 
     // ------------------------------------------------------------------
     // 7. Render loop
@@ -458,13 +484,17 @@ int main()
         processInput(window);
         anguloRotacion += velocidadRot * dt;
 
-        if (usarVersionA != versionAnterior)
+        if (usarVersionA != versionAnterior || nivelSubdivision != nivelAnterior)
         {
-            glfwSetWindowTitle(window, getWindowTitle(usarVersionA));
+            std::string tituloActual = getWindowTitle(usarVersionA, nivelSubdivision);
+            glfwSetWindowTitle(window, tituloActual.c_str());
             std::cout << (usarVersionA
                 ? "Version A: calculos por cara en C++"
-                : "Version B: calculos en el vertex shader") << std::endl;
+                : "Version B: calculos en el vertex shader")
+                << " | Nivel " << nivelSubdivision << " ("
+                << esferasA[nivelSubdivision].vertexCount() / 3 << " triangulos)" << std::endl;
             versionAnterior = usarVersionA;
+            nivelAnterior = nivelSubdivision;
         }
 
         // Actualizar posicion de la luz (en Z)
@@ -479,7 +509,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         Shader& shader = usarVersionA ? shaderA : shaderB;
-        GpuMesh& mesh = usarVersionA ? meshA : meshB;
+        GpuMesh& mesh = usarVersionA ? meshesA[nivelSubdivision] : meshesB[nivelSubdivision];
 
         shader.use();
 
@@ -491,6 +521,9 @@ int main()
 
         if (usarVersionA)
         {
+            GpuMesh& meshA = meshesA[nivelSubdivision];
+            Sphere& esferaA = esferasA[nivelSubdivision];
+
             calculateFaceLightingColors(meshA.colors, esferaA, mModel,
                                         lightPos, lightAmbient, lightDiffuse, lightSpecular,
                                         matAmbient, matDiffuse, matSpecular, matShininess,
@@ -546,8 +579,11 @@ int main()
     // ------------------------------------------------------------------
     // 8. Liberar recursos
     // ------------------------------------------------------------------
-    deleteMesh(meshA);
-    deleteMesh(meshB);
+    for (int nivel = 0; nivel <= MAX_SUBDIVISIONES; nivel++)
+    {
+        deleteMesh(meshesA[nivel]);
+        deleteMesh(meshesB[nivel]);
+    }
     deleteMesh(meshLuz);
     shaderA.del();
     shaderB.del();
@@ -571,6 +607,24 @@ void processInput(GLFWwindow* window)
     }
     if (!espacioPresionado)
         cambioVersionBloqueado = false;
+
+    bool subirDetalle = glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS;
+    bool bajarDetalle = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
+    if (!cambioDetalleBloqueado)
+    {
+        if (subirDetalle && nivelSubdivision < MAX_SUBDIVISIONES)
+        {
+            nivelSubdivision++;
+            cambioDetalleBloqueado = true;
+        }
+        else if (bajarDetalle && nivelSubdivision > 0)
+        {
+            nivelSubdivision--;
+            cambioDetalleBloqueado = true;
+        }
+    }
+    if (!subirDetalle && !bajarDetalle)
+        cambioDetalleBloqueado = false;
 
     // Traslacion
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) traslacionX += PASO_TRASLACION;
