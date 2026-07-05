@@ -26,13 +26,6 @@ struct Vertex
 // ============================================================================
 // Representa una arista del cubo mediante INDICES a dos vértices únicos.
 // Una arista conecta dos vértices del cubo.
-//
-// NOTA: Esta clase no se usa actualmente en el renderizado del cubo
-// coloreado, pero está disponible para futuras funcionalidades como:
-// - Renderizado de wireframe (GL_LINES)
-// - Detección de colisiones
-// - Deformaciones del cubo
-// - Análisis topológico
 // ============================================================================
 class Edge
 {
@@ -134,16 +127,7 @@ public:
 // ============================================================================
 // CLASE Cube
 // ============================================================================
-// Representa un cubo mediante:
-// 1. Una LISTA UNICA de 8 vértices (TOPOLOGIA)
-// 2. 6 CARAS que contienen INDICES a esos vértices (TOPOLOGIA)
-// 3. Genera automáticamente las listas geométricas (positions, colors, indices)
-//    para enviar a la GPU (GEOMETRIA)
-//
-// El color de cada vértice se asigna según el "cubo de color RGB":
-//   - Signo de X (negativo=0, positivo=1) -> componente R
-//   - Signo de Y (negativo=0, positivo=1) -> componente G
-//   - Signo de Z (negativo=0, positivo=1) -> componente B
+// Representa un cubo con su topología (vértices, caras, aristas) y su geometría
 // ============================================================================
 class Cube
 {
